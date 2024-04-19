@@ -10,10 +10,12 @@ import Profile from './components/Profile';
 import Recovery from './components/Recovery';
 import Reset from './components/Reset';
 import PageNotFound from './components/PageNotFound';
-
+import Home from './components/Home';
 
 /** auth middleware */
 import { AuthorizeUser, ProtectRoute } from './middleware/auth'
+import AllDetailsOfSingleUser from './components/AllDetailsOfSingleUser';
+import UpdateSingleUserData from './components/UpdateSingleUserData';
 
 /** root routes */
 const router = createBrowserRouter([
@@ -42,9 +44,25 @@ const router = createBrowserRouter([
         element : <Reset></Reset>
     },
     {
+        path:"/home",
+        element:<Home/>
+    },
+    { 
+        path:"/alldetailsofsingleuser/:userId",
+        element:<AllDetailsOfSingleUser   ></AllDetailsOfSingleUser>
+    },
+    
+    {
+        path:"/updatesingleuserdata/:userId",
+        element:<UpdateSingleUserData></UpdateSingleUserData>
+    },
+
+    {
         path : '*',
         element : <PageNotFound></PageNotFound>
     },
+    
+
 ])
 
 export default function App() {

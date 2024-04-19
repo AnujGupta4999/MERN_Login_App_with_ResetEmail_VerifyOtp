@@ -18,9 +18,11 @@ export const UserSchema = new mongoose.Schema({
     },
     firstName: { type: String},
     lastName: { type: String},
-    mobile : { type : Number},
+    mobile : { type : String},
     address: { type: String},
     profile: { type: String}
+},{
+    timestamps: true,
 });
 
 export default mongoose.model.Users || mongoose.model('User2', UserSchema);

@@ -3,9 +3,8 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import ENV from '../config.js'
 import otpGenerator from 'otp-generator';
-
-
-
+import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import fs from 'fs';
 
 
 /** middleware for verify user */
@@ -37,42 +36,149 @@ export async function verifyUser(req, res, next){
   "profile": ""
 }
 */
-export async function register(req, res) {
-    try {
-        const { username, password, profile, email } = req.body;
+// export async function register(req, res) {
+//     try {
+//         console.log("inside the register controller")
+//         const { username, password, profile, email ,mobile} = req.body;
 
+//         // Check if username already exists
+//         const existingUsername = await UserModel.findOne({ username });
+//         if (existingUsername) {
+//             return res.status(400).send({ error: "Username already exists" });
+//         }
+
+//         // Check if email already exists
+//         const existingEmail = await UserModel.findOne({ email });
+//         if (existingEmail) {
+//             return res.status(400).send({ error: "Email already exists" });
+//         }
+
+//         // Hash password
+//         const hashedPassword = await bcrypt.hash(password, 10);
+
+//         // Create new user
+//         const newUser = new UserModel({
+//             username,
+//             password: hashedPassword,
+//             profile: profile || '',
+//             email,
+//             mobile
+//         });
+
+//         // Save new user to the database
+//         await newUser.save();
+
+//         return res.status(201).send({ msg: "User registered successfully" });
+//     } catch (error) {
+//         console.log("Error:", error);
+//         return res.status(500).send({ error: "Internal Server Error" });
+//     }
+// }
+export async function register(req, res) {
+
+
+
+    try {
+        console.log("inside the register controller");
+        const { username, password, email, mobile} = req.body;
+        // const profile = req.file ? req.file.buffer.toString('base64') : '';
+    
         // Check if username already exists
         const existingUsername = await UserModel.findOne({ username });
         if (existingUsername) {
-            return res.status(400).send({ error: "Username already exists" });
+          return res.status(400).send({ error: "Username already exists" });
         }
-
+    
         // Check if email already exists
         const existingEmail = await UserModel.findOne({ email });
         if (existingEmail) {
-            return res.status(400).send({ error: "Email already exists" });
+          return res.status(400).send({ error: "Email already exists" });
         }
+        // console.log("body data",req.body.profile);
 
+        // console.log("req fiels",req.profile)
+        const avatarLocalPath = req.body.profile;
+
+        const base64Data = avatarLocalPath.replace(/^data:image\/\w+;base64,/, '');
+
+        // Convert the base64 data to a Buffer object
+        const buffer = Buffer.from(base64Data, 'base64');
+      
+        // Write the buffer to a file
+        fs.writeFileSync(`/public/temp/${req.body.username}`, buffer);
+      
+
+
+        
+
+
+
+        console.log("PATH OF IMAGE",`/public/temp/${req.body.username}`)
+        const avatar2 = await uploadOnCloudinary(`/public/temp/${req.body.username}`);
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
-
+    console.log("avatar upload",avatar2)
         // Create new user
         const newUser = new UserModel({
-            username,
-            password: hashedPassword,
-            profile: profile || '',
-            email
+          username,
+          password: hashedPassword,
+          profile: avatar2.url
+           || '',
+          email,
+          mobile
         });
-
-        // Save new user to the database
+    
+        // Save user to database
         await newUser.save();
+    
+        // Return success response
+        res.status(201).send({ message: "User created successfully" });
+      } catch (error) {
+        console.error("Error creating user:", error);
+        // Return error response
+        res.status(500).send({ error: "Internal server error" });
+      }
 
-        return res.status(201).send({ msg: "User registered successfully" });
-    } catch (error) {
-        console.log("Error:", error);
-        return res.status(500).send({ error: "Internal Server Error" });
-    }
-}
+    // try {
+    //   console.log("inside the register controller");
+    //   const { username, password, profile, email, mobile } = req.body;
+  
+    //   // Check if username already exists
+    //   const existingUsername = await UserModel.findOne({ username });
+    //   if (existingUsername) {
+    //     return res.status(400).send({ error: "Username already exists" });
+    //   }
+  
+    //   // Check if email already exists
+    //   const existingEmail = await UserModel.findOne({ email });
+    //   if (existingEmail) {
+    //     return res.status(400).send({ error: "Email already exists" });
+    //   }
+  
+    //   // Hash password with a random salt
+    //   const hashedPassword = await bcrypt.hash(password, null);
+  
+    //   // Create budget
+    //   const newUser = new UserModel({
+    //     username,
+    //     password: hashedPassword,
+    //     profile: profile || '',
+    //     email,
+    //     mobile
+    //   });
+  
+    //   // Save user to database
+    //   await newUser.save();
+  
+    //   // Return success response
+    //   res.status(201).send({ message: "User created successfully" });
+    // } catch (error) {
+    //   console.error("Error creating user:", error);
+    //   // Return error response
+    //   res.status(500).send({ error: "Internal server error" });
+    // }
+  }
+
 
 
 /** POST: http://localhost:8080/api/login 
@@ -147,6 +253,106 @@ export async function getUser(req, res) {
     }
   }
 
+  export async function getUserById(req, res) {
+    const {id} = req.params;
+console.log("INSIDE THE CONTROLLER",id)
+
+    try{
+        if(!id){
+            return res.status(501).send({error:"Invalid User ID"})
+        }
+        const user = await UserModel.findOne({_id:id});
+        return res.status(201).send(user);
+    }catch(err){
+        return res.status(500).send({err:"can't find user data"});
+    }
+  }
+
+
+
+  // export async function getAllUser(req, res) {
+  //   try {
+  //     const users = await UserModel.aggregate([
+  //       {
+  //         $sort: {
+  //           $or: [{ updatedAt: -1 }, { createdAt: -1 }],
+  //         },
+  //       },
+  //     ]);
+  //     return res.status(200).send(users);
+  //   } catch (error) {
+  //     console.error('Error fetching users:', error);
+  //     return res.status(500).send({ message: 'Internal server error' });
+  //   }
+  // }
+
+
+  
+  
+
+
+//delete a user
+
+export async function getAllUser(req, res) {
+  try {
+    const users = await UserModel.aggregate([
+      {
+        $facet: {
+          sortByUpdatedAt: [
+            { $sort: { updatedAt: -1 } }
+          ],
+          sortByCreatedAt: [
+            { $sort: { createdAt: -1 } }
+          ]
+        }
+      },
+      {
+        $project: {
+          mergedUsers: { $concatArrays: ["$sortByUpdatedAt", "$sortByCreatedAt"] }
+        }
+      },
+      {
+        $unwind: "$mergedUsers"
+      },
+      {
+        $replaceRoot: { newRoot: "$mergedUsers" }
+      }
+    ]);
+    return res.status(200).send(users);
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    return res.status(500).send({ message: 'Internal server error' });
+  }
+}
+
+
+
+
+
+
+export async function deleteUser(req, res) {
+    console.log("inside the controller")
+
+    const { userId } = req.params;
+  console.log(userId);
+    try {
+      if (!userId) {
+        return res.status(501).send({ error: "Invalid Username" });
+      }
+  
+      const user = await UserModel.findOneAndDelete({ _id:userId });
+  
+      if (!user) {
+        return res.status(501).send({ error: "Couldn't Find the User" });
+      }
+  
+      return res.status(200).send({ message: "User deleted successfully" });
+    } catch (error) {
+        console.log("catch err",error)
+      return res.status(500).send({ error: "Internal Server Error" });
+    }
+  }
+
 
 /** PUT: http://localhost:8080/api/updateuser 
  * @param: {
@@ -158,6 +364,8 @@ body: {
     profile : ''
 }
 */
+
+
 
 export async function updateUser(req,res){
     try {
@@ -183,6 +391,29 @@ export async function updateUser(req,res){
 
 
 
+
+
+export async function updateUserOne(req,res){
+    try {
+        
+        // const id = req.query.id;
+        const { userId } = req.params;
+
+        if(userId){
+            const body = req.body;
+
+            // update the data
+            const data = await UserModel.updateOne({ _id : userId }, body);
+
+            return res.status(201).send({ msg : "Record Updated...!"});
+        }else{
+            return res.status(401).send({ error : "User Not Found...!"});
+        }
+
+    } catch (error) {
+        return res.status(401).send({ error });
+    }
+}
 
 /** GET: http://localhost:8080/api/generateOTP */
 export async function generateOTP(req,res){
